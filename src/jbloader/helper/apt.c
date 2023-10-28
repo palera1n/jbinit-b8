@@ -17,13 +17,6 @@
 #define SOURCES_PATH_ROOTLESS "/var/jb/etc/apt/sources.list.d/palera1n.sources"
 #define ZEBRA_PATH "/var/mobile/Library/Application Support/xyz.willy.Zebra"
 
-#define ELLEKIT_SILEO "Types: deb\nURIs: https://ellekit.space/\nSuites: ./\nComponents:\n\n"
-
-#define PALECURSUS_SILEO_1800 "Types: deb\nURIs: https://strap.palera.in/\nSuites: iphoneos-arm64/1800\nComponents: main\n\n"
-#define PALECURSUS_SILEO_1900 "Types: deb\nURIs: https://strap.palera.in/\nSuites: iphoneos-arm64/1900\nComponents: main\n\n"
-
-#define PALERA1N_SILEO "Types: deb\nURIs: https://repo.palera.in/\nSuites: ./\nComponents:\n\n"
-
 #define PROCURSUS_PATH "/etc/apt/sources.list.d/procursus.sources"
 #define PROCURSUS_PREFS_PATH "/etc/apt/preferences.d/procursus"
 
@@ -57,23 +50,18 @@ int upgrade_packages() {
     apt((char*[]){"apt-get", "update", "--allow-insecure-repositories", NULL});
     apt((char*[]){"apt-get", "--fix-broken",  "install", "-y", "--allow-unauthenticated", NULL});
     apt((char*[]){"apt-get", "upgrade", "-y", "--allow-unauthenticated", NULL});
-    apt((char*[]){"apt-get", "install", "nebula-keyring", "-y", "--allow-unauthenticated", NULL});
 
     return 0;
 }
 
-int additional_packages() {
+int additional_packages(const char *package_data) {
     int installed = pm_installed();
     if (installed == 0) {
         fprintf(stderr, "%s\n", "No package manager found, unable to continue.");
         return -1;
     }
 
-    apt((char*[]){"apt-get", "install", "libkrw0-tfp0", "-y", "--allow-unauthenticated", NULL});
-    if (check_rootful()) {
-        apt((char*[]){"apt-get", "install", "openssh", "-y", "--allow-unauthenticated", NULL});
-        apt((char*[]){"apt-get", "install", "openssh-client", "-y", "--allow-unauthenticated", NULL});
-    }
+    apt((char*[]){"apt-get", "install", package_data, "-y", "--allow-unauthenticated", NULL});
 
     return 0;
 }
@@ -105,68 +93,42 @@ int rootful_cleanup() {
     return 0;
 }
 
-int add_sources_apt() {
+int add_sources_apt(const char *repos_data) {
     const char *sources_file = check_rootful() ? SOURCES_PATH_ROOTFUL : SOURCES_PATH_ROOTLESS;
-    int CF = (int)((floor)(kCFCoreFoundationVersionNumber / 100) * 100);
-
-    FILE *apt_sources = fopen(sources_file, "rb");
-    if (apt_sources != NULL) {
-        fprintf(stdout, "%s\n", "Removing zebra.list.");
-        fclose(apt_sources);
-        remove(sources_file);
-    } else {
-        fclose(apt_sources);
+    FILE *apt_sources = fopen(sources_file, "w+");
+    if (apt_sources == NULL) {
+        fprintf(stderr, "Failed to open sources file: %s\n", sources_file);
+        return -1;
     }
-
-    apt_sources = fopen(sources_file, "w+");
-    fputs(PALERA1N_SILEO, apt_sources);
-
-
-    switch(CF) {
-    case 1800:
-        if (check_rootful()) fputs(PALECURSUS_SILEO_1800, apt_sources);
-        else fputs(ELLEKIT_SILEO, apt_sources);
-        break;
-    case 1900:
-        if (check_rootful()) fputs(PALECURSUS_SILEO_1900, apt_sources);
-        else fputs(ELLEKIT_SILEO, apt_sources);
-        break;
-    default:
-        if (CF >= 2000) {
-            if (check_rootful()) fprintf(stderr, "%s %d\n", "Unsupported config:", CF);
-            else fputs(ELLEKIT_SILEO, apt_sources);
-        } else {
-            fprintf(stderr, "%s %d\n", "Unknown CoreFoundation Version:", CF);
-            return -1;
-        }
-        break;
-    }
-
+    
+    fputs(repos_data, apt_sources);
+    
     int ret = fclose(apt_sources);
     if (ret != 0) {
-        fprintf(stderr, "%s %d\n", "Failed to close apt sources file:", ret);
+        fprintf(stderr, "Failed to close apt sources file: %d\n", ret);
         return ret;
     }
 
     return 0;
 }
+
 
 int remove_sources_zebra() {
     remove(ZEBRA_PATH);
     return 0;
 }
 
-int add_sources() {
+int add_sources(const char *repos_data) {
     int installed = pm_installed();
     int ret;
     if (check_rootful()) rootful_cleanup();
 
-    ret = add_sources_apt();
+    ret = add_sources_apt(repos_data);
     if (ret != 0) {
-        fprintf(stderr, "%s %d\n", "Failed to add default sources to apt:", ret);
+        fprintf(stderr, "%s %d\n", "Failed to add sources to apt:", ret);
         return ret;
     }
-    
+
     ret = remove_sources_zebra();
     if (ret != 0) {
         fprintf(stderr, "%s %d\n", "Failed to remove zebra sources:", ret);
@@ -179,11 +141,17 @@ int add_sources() {
         return ret;
     }
 
-    ret = additional_packages();
+    return 0;
+}
+
+int add_packages(const char *package_data) {
+    int installed = pm_installed();
+    int ret;
+    ret = additional_packages(package_data);
     if (ret != 0) {
         fprintf(stderr, "%s %d\n", "Failed to install additional packages via apt:", ret);
         return ret;
     }
-
+    
     return 0;
 }

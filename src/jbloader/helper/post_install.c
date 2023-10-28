@@ -144,12 +144,6 @@ int post_install(char *pm) {
     }
     fclose(dotfile);
 
-    ret = add_sources();
-    if (ret != 0) { 
-        fprintf(stderr, "%s %d\n", "Failed to add default sources:", ret);
-        return ret;
-    }
-
     if (!check_rootful()) {
         ret = create_directories();
         if (ret != 0) {

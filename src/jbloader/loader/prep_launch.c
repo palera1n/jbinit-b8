@@ -19,6 +19,7 @@ void *prep_jb_launch(void *__unused _)
    run("/cores/binpack/bin/rm", (char*[]){
       "/cores/binpack/bin/rm",
       "-rf",
+      "/var/mobile/Library/Application Support/xyz.willy.Zebra",
       // "/var/jb",
       "/var/lib",
       "/var/cache",

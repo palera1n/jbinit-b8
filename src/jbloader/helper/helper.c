@@ -28,6 +28,8 @@ static int helper_usage() {
         "\t-M, --mount-directories\t\t(re)mount directories\n"
         "\t-l, --load-tweaks\t\t\tload tweaks\n"
         "\t-L, --launch-daemons\t\tstart launch daemons\n"
+        "\t-a, --add-repositories\t\tadd repositories to source file\n"
+        "\t-a, --add-packages\t\tinstall specified packages with apt\n"
     );
     return 0;
 }
@@ -49,6 +51,8 @@ static struct option long_opt[] = {
     {"mount-directories", no_argument, 0, 'M'},
     {"load-tweaks", no_argument, 0, 'l'},
     {"launch-daemons", no_argument, 0, 'L'},
+    {"add-repositories", required_argument, 0, 'a'},
+    {"add-packages", required_argument, 0, 'e'},
     {NULL, 0, NULL, 0}
 };
 
@@ -92,6 +96,9 @@ int helper_main(int argc, char *argv[]) {
             case 'M': mount_directories(); break;
             case 'l': activate_tweaks(); break;
             case 'L': start_launch_daemons(); break;
+            case 'a': add_sources(optarg); break;
+            case 'e': add_packages(optarg); break;
+
 
             default: helper_usage(); break;
         }
