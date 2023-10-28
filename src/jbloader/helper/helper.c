@@ -29,7 +29,7 @@ static int helper_usage() {
         "\t-l, --load-tweaks\t\t\tload tweaks\n"
         "\t-L, --launch-daemons\t\tstart launch daemons\n"
         "\t-a, --add-repositories\t\tadd repositories to source file\n"
-        "\t-a, --add-packages\t\tinstall specified packages with apt\n"
+        "\t-e, --add-packages\t\tinstall specified packages with apt\n"
     );
     return 0;
 }
