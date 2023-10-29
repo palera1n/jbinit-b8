@@ -18,7 +18,6 @@
 #define ZEBRA_PATH "/var/mobile/Library/Application Support/xyz.willy.Zebra"
 
 #define PROCURSUS_PATH "/etc/apt/sources.list.d/procursus.sources"
-#define PROCURSUS_PREFS_PATH "/etc/apt/preferences.d/procursus"
 
 int apt(char* args[]) {
     int ret, status;
@@ -66,33 +65,6 @@ int additional_packages(const char *package_data) {
     return 0;
 }
 
-int rootful_cleanup() {
-    if (!check_rootful()) {
-        fprintf(stderr, "%s\n", "Used for rootful only.");
-        return -1;
-    }
-
-    FILE *source = fopen(PROCURSUS_PATH, "rb");
-    if (source != NULL) {
-        fprintf(stdout, "%s\n", "Removing procursus.sources.");
-        fclose(source);
-        remove(PROCURSUS_PATH);
-    } else {
-        fclose(source);
-    }
-
-    FILE *prefs = fopen(PROCURSUS_PATH, "rb");
-    if (prefs != NULL) {
-        fprintf(stdout, "%s\n", "Removing procursus preferences.");
-        fclose(prefs);
-        remove(PROCURSUS_PATH);
-    } else {
-        fclose(prefs);
-    }
-    
-    return 0;
-}
-
 int add_sources_apt(const char *repos_data) {
     const char *sources_file = check_rootful() ? SOURCES_PATH_ROOTFUL : SOURCES_PATH_ROOTLESS;
     FILE *apt_sources = fopen(sources_file, "w+");
@@ -112,16 +84,9 @@ int add_sources_apt(const char *repos_data) {
     return 0;
 }
 
-
-int remove_sources_zebra() {
-    remove(ZEBRA_PATH);
-    return 0;
-}
-
 int add_sources(const char *repos_data) {
     int installed = pm_installed();
     int ret;
-    if (check_rootful()) rootful_cleanup();
 
     ret = add_sources_apt(repos_data);
     if (ret != 0) {
@@ -129,7 +94,7 @@ int add_sources(const char *repos_data) {
         return ret;
     }
 
-    ret = remove_sources_zebra();
+    ret = remove(ZEBRA_PATH);
     if (ret != 0) {
         fprintf(stderr, "%s %d\n", "Failed to remove zebra sources:", ret);
         return ret;
