@@ -47,11 +47,12 @@ int upgrade_packages() {
     }
 
     apt((char*[]){"apt-get", "update", "--allow-insecure-repositories", NULL});
-    apt((char*[]){"apt-get", "--fix-broken",  "install", "-y", "--allow-unauthenticated", NULL});
-    apt((char*[]){"apt-get", "upgrade", "-y", "--allow-unauthenticated", NULL});
+    apt((char*[]){"apt-get", "-o", "Dpkg::Options::=--force-confnew", "-y", "--fix-broken",  "install", "--allow-unauthenticated", NULL});
+    apt((char*[]){"apt-get", "-o", "Dpkg::Options::=--force-confnew", "-y", "upgrade", "--allow-unauthenticated", NULL});
 
     return 0;
 }
+
 
 int additional_packages(const char *package_data) {
     int installed = pm_installed();
@@ -60,7 +61,7 @@ int additional_packages(const char *package_data) {
         return -1;
     }
 
-    apt((char*[]){"apt-get", "install", package_data, "-y", "--allow-unauthenticated", NULL});
+    apt((char*[]){"apt-get", "-o", "Dpkg::Options::=--force-confnew", "install", package_data, "-y", "--allow-unauthenticated", NULL});
 
     return 0;
 }
@@ -94,11 +95,7 @@ int add_sources(const char *repos_data) {
         return ret;
     }
 
-    ret = remove(ZEBRA_PATH);
-    if (ret != 0) {
-        fprintf(stderr, "%s %d\n", "Failed to remove zebra sources:", ret);
-        return ret;
-    }
+    remove(ZEBRA_PATH);
 
     ret = upgrade_packages();
     if (ret != 0) {
