@@ -204,8 +204,8 @@ int hook_posix_spawnp_launchd(pid_t *pid,
     newenvp[j + 1] = NULL;
             
     int ret = posix_spawnp(pid, path, action, attr, argv, newenvp);
-    if (inj != NULL) free(inj);
-    if (currentenv != NULL) free(currentenv);
+    if (inj) free(inj);
+    if (newenvp) free(newenvp);
     return ret;
 }
 int hook_posix_spawnp_xpcproxy(pid_t *pid,
@@ -258,8 +258,8 @@ int hook_posix_spawnp_xpcproxy(pid_t *pid,
     newenvp[j + 1] = NULL;
 
     int ret = posix_spawnp(pid, path, action, attr, argv, newenvp);
-    free(inj);
-    free(newenvp);
+    if (inj) free(inj);
+    if (newenvp) free(newenvp);
     return ret;
 }
 int hook_posix_spawnp(pid_t *pid,
