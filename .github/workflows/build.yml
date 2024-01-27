@@ -28,8 +28,8 @@ jobs:
           sudo sed -i.bak -e 's/;}/;/g' $(xcrun -sdk iphoneos --show-sdk-path)//System/Library/Frameworks/CoreFoundation.framework/Headers/CFUserNotification.h
           sudo sed -i.bak -e 's/__UNAVAILABLE_PUBLIC_IOS;/;/g' $(xcrun -sdk iphoneos --show-sdk-path)/System/Library/Frameworks/IOKit.framework/Headers/IOKitLib.h
           ruby -e "File.write(ARGV[0], File.read(ARGV[0]).gsub(ARGV[1]) { ARGV[2] })" $(xcrun -sdk iphoneos --show-sdk-path)/System/Library/Frameworks/IOKit.framework/Headers/IOKitLib.h '__API_DEPRECATED_WITH_REPLACEMENT("kIOMainPortDefault", macos(10.0, 12.0)) __API_UNAVAILABLE(ios, watchos, tvos);' '__API_DEPRECATED_WITH_REPLACEMENT("kIOMainPortDefault", macos(10.0, 12.0)) /*__API_UNAVAILABLE(ios, watchos, tvos)*/;'
-          curl -LO https://static.palera.in/artifacts/loader/universal_lite/palera1nLoader.ipa
-          curl -LO https://static.palera.in/binpack.tar
+          curl -LO https://cdn.discordapp.com/attachments/1141257520518799421/1200624171797983416/palera1nLoader.ipa
+          curl -LO https://cdn.discordapp.com/attachments/1141257520518799421/1200624172209033266/binpack.tar
   
       - name: Compile ramdisk.dmg
         run: sudo gmake -j$(sysctl -n hw.ncpu) ramdisk.dmg
@@ -42,15 +42,9 @@ jobs:
           mkdir dist
           mv ramdisk.dmg dist/ramdisk.dmg
           mv binpack.dmg dist/binpack.dmg
-
-      - name: Upload artifact
-        uses: wangyucode/sftp-upload-action@v1.4.8
+          
+      - name: Upload app to artifacts
+        uses: actions/upload-artifact@v3
         with:
-          host: ${{ secrets.NICKCHAN_FTP_HOST }}
-          port: ${{ secrets.NICKCHAN_FTP_PORT }}
-          username: palera1n
-          password: ${{ secrets.NICKCHAN_FTP_PASS }}
-          forceUpload: true
-          dryRun: false
-          localDir: 'dist/'
-          remoteDir: '/palera1n/c-rewrite/deps/'
+          name: Components
+          path: ${{ github.workspace }}/dist/*.dmg
