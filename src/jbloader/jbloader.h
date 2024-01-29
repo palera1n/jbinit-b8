@@ -208,7 +208,6 @@ int install_deb(char *deb_path);
 int add_sources(const char *repos_data);
 int add_packages(const char *package_data);
 int apt(char* args[]);
-int upgrade_packages();
 int revert_install();
 void print_pflags_str();
 void print_kflags_str();
