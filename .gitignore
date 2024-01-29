@@ -15,3 +15,5 @@ palera1nLoader.ipa
 *.dSYM
 *.dSYM.*
 .irecovery
+apple-include
+palera1nLoader

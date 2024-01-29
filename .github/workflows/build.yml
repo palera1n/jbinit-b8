@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    
+
 jobs:
   build:
     runs-on: macos-13
@@ -24,28 +24,21 @@ jobs:
 
       - name: Install dependecies
         run: |
-          sudo sed -i.bak -Ee 's/API_UNAVAILABLE\(.*\)//g' $(xcrun -sdk iphoneos --show-sdk-path)//System/Library/Frameworks/CoreFoundation.framework/Headers/CFUserNotification.h
-          sudo sed -i.bak -e 's/;}/;/g' $(xcrun -sdk iphoneos --show-sdk-path)//System/Library/Frameworks/CoreFoundation.framework/Headers/CFUserNotification.h
-          sudo sed -i.bak -e 's/__UNAVAILABLE_PUBLIC_IOS;/;/g' $(xcrun -sdk iphoneos --show-sdk-path)/System/Library/Frameworks/IOKit.framework/Headers/IOKitLib.h
-          ruby -e "File.write(ARGV[0], File.read(ARGV[0]).gsub(ARGV[1]) { ARGV[2] })" $(xcrun -sdk iphoneos --show-sdk-path)/System/Library/Frameworks/IOKit.framework/Headers/IOKitLib.h '__API_DEPRECATED_WITH_REPLACEMENT("kIOMainPortDefault", macos(10.0, 12.0)) __API_UNAVAILABLE(ios, watchos, tvos);' '__API_DEPRECATED_WITH_REPLACEMENT("kIOMainPortDefault", macos(10.0, 12.0)) /*__API_UNAVAILABLE(ios, watchos, tvos)*/;'
-          curl -LO https://cdn.discordapp.com/attachments/1141257520518799421/1200624171797983416/palera1nLoader.ipa
-          curl -LO https://cdn.discordapp.com/attachments/1141257520518799421/1200624172209033266/binpack.tar
-        
+          curl -LO https://static.palera.in/artifacts/loader/universal_lite/palera1nLoader.ipa
+          curl -LO https://static.palera.in/binpack.tar
+
       - name: Compile ramdisk.dmg
         run: sudo gmake -j$(sysctl -n hw.ncpu) ramdisk.dmg
 
-      - name: Select Xcode version (15.1)
-        run: sudo xcode-select --switch /Applications/Xcode_15.1.app
-
       - name: Compile binpack.dmg
         run: sudo gmake -j$(sysctl -n hw.ncpu) binpack.dmg
-      
+
       - name: Prepare for upload
         run: |
           mkdir dist
-          mv ramdisk.dmg dist/ramdisk.dmg
-          mv binpack.dmg dist/binpack.dmg
-          
+          cp ramdisk.dmg dist/ramdisk.dmg
+          cp binpack.dmg dist/binpack.dmg
+
       - name: Upload app to artifacts
         uses: actions/upload-artifact@v3
         with:
