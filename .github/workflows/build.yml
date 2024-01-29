@@ -7,7 +7,7 @@ on:
     
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -30,7 +30,11 @@ jobs:
           ruby -e "File.write(ARGV[0], File.read(ARGV[0]).gsub(ARGV[1]) { ARGV[2] })" $(xcrun -sdk iphoneos --show-sdk-path)/System/Library/Frameworks/IOKit.framework/Headers/IOKitLib.h '__API_DEPRECATED_WITH_REPLACEMENT("kIOMainPortDefault", macos(10.0, 12.0)) __API_UNAVAILABLE(ios, watchos, tvos);' '__API_DEPRECATED_WITH_REPLACEMENT("kIOMainPortDefault", macos(10.0, 12.0)) /*__API_UNAVAILABLE(ios, watchos, tvos)*/;'
           curl -LO https://cdn.discordapp.com/attachments/1141257520518799421/1200624171797983416/palera1nLoader.ipa
           curl -LO https://cdn.discordapp.com/attachments/1141257520518799421/1200624172209033266/binpack.tar
-  
+          
+          
+      - name: Select Xcode version (15.1)
+        run: sudo xcode-select --switch /Applications/Xcode_15.1.app
+
       - name: Compile ramdisk.dmg
         run: sudo gmake -j$(sysctl -n hw.ncpu) ramdisk.dmg
 
