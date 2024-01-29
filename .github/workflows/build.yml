@@ -14,6 +14,9 @@ jobs:
         with:
           submodules: true
 
+      - name: Select Xcode version (15.2)
+        run: sudo xcode-select --switch /Applications/Xcode_15.2.app
+
       - name: Install dependencies (packages)
         run: |
           sudo /usr/local/bin/pip3 install jsonschema jinja2
