@@ -22,7 +22,6 @@ rootlesshooks.dylib: cfprefsd.o libellekit.dylib
 	$(CC) -Os cfprefsd.o libellekit.dylib \
 		-flto=full \
 		-target arm64-apple-ios14.0 \
-		-sdk $(shell xcrun -sdk iphoneos --show-sdk-path) \
 		-Wl,-rpath -Wl,/var/jb/Library/Frameworks \
 		-Wl,-rpath -Wl,/var/jb/usr/lib \
 		-Wl,-rpath -Wl,/cores/binpack/Library/Frameworks \
