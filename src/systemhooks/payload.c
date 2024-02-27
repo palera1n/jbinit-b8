@@ -154,11 +154,13 @@ xpc_object_t hook_xpc_dictionary_get_value(xpc_object_t dict, const char *key){
 }
 DYLD_INTERPOSE(hook_xpc_dictionary_get_value, xpc_dictionary_get_value);
 
+#if 0
 bool hook_xpc_dictionary_get_bool(xpc_object_t dictionary, const char *key) {
   if (!strcmp(key, "LogPerformanceStatistics")) return true;
   else return xpc_dictionary_get_bool(dictionary, key);
 }
 DYLD_INTERPOSE(hook_xpc_dictionary_get_bool, xpc_dictionary_get_bool);
+#endif
 
 int hook_posix_spawnp_launchd(pid_t *pid,
                       const char *path,
