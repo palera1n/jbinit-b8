@@ -178,6 +178,9 @@ int hook_posix_spawnp_launchd(pid_t *pid,
       envcnt++;
     }
     char** newenvp = malloc((envcnt + 2) * sizeof(char **));
+    if (!newenvp) {
+      return ENOMEM;
+    }
     int j = 0;
     char* currentenv = NULL;
     for (int i = 0; i < envcnt; i++){
@@ -194,16 +197,16 @@ int hook_posix_spawnp_launchd(pid_t *pid,
       size_t inj_len = strlen(currentenv) + 1 + strlen(newlib) + 1;
       inj = malloc(inj_len);
       if (inj == NULL) {
-        perror(NULL);
-        abort();
+        if (newenvp) free(newenvp);
+        return ENOMEM;
       }
       snprintf(inj, inj_len, "%s:%s", currentenv, newlib);
     } else {
       size_t inj_len = strlen("DYLD_INSERT_LIBRARIES=") + strlen(newlib) + 1;
       inj = malloc(inj_len);
       if (inj == NULL) {
-        perror(NULL);
-        abort();
+        if (newenvp) free(newenvp);
+        return ENOMEM;
       }
       snprintf(inj, inj_len, "DYLD_INSERT_LIBRARIES=%s", newlib);
     }
@@ -232,7 +235,9 @@ int hook_posix_spawnp_xpcproxy(pid_t *pid,
     }
 
     char **newenvp = malloc((envcnt + 2) * sizeof(char **));
-    if (newenvp == NULL) abort();
+    if (!newenvp) {
+      return ENOMEM;
+    }
     int j = 0;
     char *currentenv = NULL;
     for (int i = 0; i < envcnt; i++)
@@ -252,14 +257,20 @@ int hook_posix_spawnp_xpcproxy(pid_t *pid,
     {
         size_t inj_len = strlen(currentenv) + 1 + strlen(newlib) + 1;
         inj = malloc(inj_len);
-        if (inj == NULL) abort();
+        if (inj == NULL) {
+          if (newenvp) free(newenvp);
+          return ENOMEM;
+        }
         snprintf(inj, inj_len, "%s:%s", currentenv, newlib);
     }
     else
     {
         size_t inj_len = strlen("DYLD_INSERT_LIBRARIES=") + strlen(newlib) + 1;
         inj = malloc(inj_len);
-        if (inj == NULL) abort();
+        if (inj == NULL) {
+          if (newenvp) free(newenvp);
+          return ENOMEM;
+        }
         snprintf(inj, inj_len, "DYLD_INSERT_LIBRARIES=%s", newlib);
     }
     newenvp[j] = inj;
