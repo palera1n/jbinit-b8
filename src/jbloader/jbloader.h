@@ -120,7 +120,6 @@ struct HDIImageCreateBlock64
 };
 extern struct kerninfo info;
 extern struct paleinfo pinfo;
-extern pthread_mutex_t safemode_mutex;
 
 extern unsigned char create_fakefs_sh[];
 extern unsigned int create_fakefs_sh_len;
@@ -159,8 +158,7 @@ int create_remove_fakefs();
 void *enable_ssh(void *__unused _);
 void *prep_jb_launch(void *__unused _);
 int loadDaemons();
-void safemode_alert(CFNotificationCenterRef center, void *observer,
-                    CFStringRef name, const void *object, CFDictionaryRef userInfo);
+void safemode_alert(void);
 int uicache_apps();
 void *prep_jb_ui(void *__unused _);
 int uicache_loader();
