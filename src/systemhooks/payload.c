@@ -75,6 +75,8 @@ xpc_object_t xpc_array_create(const xpc_object_t *objects, size_t count);
 xpc_object_t xpc_string_create(const char *string);
 size_t xpc_dictionary_get_count(xpc_object_t dictionary);
 void xpc_array_append_value(xpc_object_t xarray, xpc_object_t value);
+void xpc_array_set_string(xpc_object_t xarray, size_t index, const char *string);
+void xpc_release(xpc_object_t object);
 
 #define XPC_ARRAY_APPEND ((size_t)(-1))
 #define XPC_ERROR_CONNECTION_INVALID XPC_GLOBAL_OBJECT(_xpc_error_connection_invalid)
@@ -109,43 +111,43 @@ xpc_object_t hook_xpc_dictionary_get_value(xpc_object_t dict, const char *key){
   xpc_object_t retval = xpc_dictionary_get_value(dict,key);
   if (getpid() != 1) return retval;
   if (strcmp(key,"LaunchDaemons") == 0) {
-    xpc_object_t submitJob = xpc_dictionary_create(NULL, NULL, 0);
-    xpc_object_t programArguments = xpc_array_create(NULL, 0);
-
-    xpc_array_append_value(programArguments, xpc_string_create("/cores/jbloader"));
-    if(getenv("XPC_USERSPACE_REBOOTED") != NULL) {
-      xpc_array_append_value(programArguments, xpc_string_create("-u"));
+    static xpc_object_t submitJob = NULL;
+    if (!submitJob) {
+      submitJob = xpc_dictionary_create(NULL, NULL, 0);
+      xpc_object_t programArguments = xpc_array_create(NULL, 0);
+      xpc_array_set_string(programArguments, XPC_ARRAY_APPEND, "/cores/jbloader");
+      if(getenv("XPC_USERSPACE_REBOOTED") != NULL) {
+        xpc_array_set_string(programArguments, XPC_ARRAY_APPEND, "-u");
+      }
+      xpc_array_set_string(programArguments, XPC_ARRAY_APPEND, "-j");
+      xpc_dictionary_set_bool(submitJob, "KeepAlive", false);
+      xpc_dictionary_set_bool(submitJob, "RunAtLoad", true);
+      xpc_dictionary_set_string(submitJob, "ProcessType", "Interactive");
+      xpc_dictionary_set_string(submitJob, "UserName", "root");
+      xpc_dictionary_set_string(submitJob, "Program", "/cores/jbloader");
+      xpc_dictionary_set_string(submitJob, "StandardInPath", "/dev/console");
+      xpc_dictionary_set_string(submitJob, "StandardOutPath", "/dev/console");
+      xpc_dictionary_set_string(submitJob, "StandardErrorPath", "/dev/console");
+      xpc_dictionary_set_string(submitJob, "Label", "in.palera.jbloader");
+      xpc_dictionary_set_value(submitJob, "ProgramArguments", programArguments);
+      xpc_release(programArguments);
     }
-    xpc_array_append_value(programArguments, xpc_string_create("-j"));
-
-    xpc_dictionary_set_bool(submitJob, "KeepAlive", false);
-    xpc_dictionary_set_bool(submitJob, "RunAtLoad", true);
-    xpc_dictionary_set_string(submitJob, "ProcessType", "Interactive");
-    xpc_dictionary_set_string(submitJob, "UserName", "root");
-    xpc_dictionary_set_string(submitJob, "Program", "/cores/jbloader");
-    xpc_dictionary_set_string(submitJob, "StandardInPath", "/dev/console");
-    xpc_dictionary_set_string(submitJob, "StandardOutPath", "/dev/console");
-    xpc_dictionary_set_string(submitJob, "StandardErrorPath", "/dev/console");
-    xpc_dictionary_set_string(submitJob, "Label", "in.palera.jbloader");
-    xpc_dictionary_set_value(submitJob, "ProgramArguments", programArguments);
-#ifdef DEV_BUILD
-    xpc_object_t environmentVariables = xpc_dictionary_create(NULL, NULL, 0);
-    xpc_dictionary_set_string(environmentVariables, "DYLD_INSERT_LIBRARIES", "/cores/xpchook.dylib");
-    xpc_dictionary_set_value(submitJob, "EnvironmentVariables", environmentVariables);
-#endif
     xpc_dictionary_set_value(retval, "/System/Library/LaunchDaemons/in.palera.jbloader.plist", submitJob);
   } else if (strcmp(key, "sysstatuscheck") == 0) {
+    static xpc_object_t newTask = NULL;
+    if (newTask) return newTask;
+    newTask = xpc_dictionary_create(NULL, NULL, 0);
     xpc_object_t programArguments = xpc_array_create(NULL, 0);
-    xpc_array_append_value(programArguments, xpc_string_create("/cores/jbloader"));
+    xpc_array_set_string(programArguments, XPC_ARRAY_APPEND, "/cores/jbloader");
     if(getenv("XPC_USERSPACE_REBOOTED") != NULL) {
-      xpc_array_append_value(programArguments, xpc_string_create("-u"));
+      xpc_array_set_string(programArguments, XPC_ARRAY_APPEND, "-u");
     }
-    xpc_array_append_value(programArguments, xpc_string_create("-s"));
-    xpc_object_t newTask = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_array_set_string(programArguments, XPC_ARRAY_APPEND, "-s");
     xpc_dictionary_set_bool(newTask, "PerformAfterUserspaceReboot", true);
     xpc_dictionary_set_bool(newTask, "RebootOnSuccess", true);
     xpc_dictionary_set_string(newTask, "Program", "/cores/jbloader");
     xpc_dictionary_set_value(newTask, "ProgramArguments", programArguments);
+    xpc_release(programArguments);
     return newTask;
   }
   return retval;
@@ -163,8 +165,11 @@ int hook_posix_spawnp_launchd(pid_t *pid,
                       const posix_spawn_file_actions_t *action,
                       const posix_spawnattr_t *attr,
                       char *const argv[], char *envp[]) {
+  if (!argv || !path || !envp)
+    return posix_spawnp(pid, path, action, attr, argv, envp);
   if (argv[1] == NULL || strcmp(argv[1], "com.apple.cfprefsd.xpc.daemon"))
     return posix_spawnp(pid, path, action, attr, argv, envp);
+
     char *inj = NULL;
     int envcnt = 0;
     while (envp[envcnt] != NULL) {
@@ -214,6 +219,7 @@ int hook_posix_spawnp_xpcproxy(pid_t *pid,
                       const posix_spawnattr_t *attr,
                       char *const argv[], char *envp[])
 {
+    if (!argv || !envp || !path) return posix_spawnp(pid, path, action, attr, argv, envp);
     if(strcmp(argv[0], "/usr/sbin/cfprefsd")) {
         return posix_spawnp(pid, path, action, attr, argv, envp);
     }
@@ -283,7 +289,16 @@ int hook_posix_spawnp(pid_t *pid,
 }
 DYLD_INTERPOSE(hook_posix_spawnp, posix_spawnp);
 
-void DoNothingHandler(int __unused _) {}
+#define MEMORYSTATUS_CMD_SET_JETSAM_TASK_LIMIT        6
+
+int memorystatus_control(uint32_t command, int32_t pid, uint32_t flags, void *buffer, size_t buffersize);
+int hook_memorystatus_control(uint32_t command, int32_t pid, uint32_t flags, void *buffer, size_t buffersize) {
+  if (command == MEMORYSTATUS_CMD_SET_JETSAM_TASK_LIMIT && pid == 1) {
+    flags = 32768;
+  }
+  return memorystatus_control(command, pid, flags, buffer, buffersize);
+}
+DYLD_INTERPOSE(hook_memorystatus_control, memorystatus_control);
 
 uint32_t get_flags_from_p1ctl(int fd_console) {
   if (access("/cores/binpack/usr/sbin/p1ctl", F_OK) != 0) {
@@ -296,10 +311,14 @@ uint32_t get_flags_from_p1ctl(int fd_console) {
   posix_spawn_file_actions_t actions;
   posix_spawn_file_actions_init(&actions);
   posix_spawn_file_actions_adddup2(&actions, flides[1], STDOUT_FILENO);
-  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/console", O_WRONLY, 0);
+  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/console", O_RDWR, 0);
+  posix_spawn_file_actions_addclose(&actions, flides[0]);
+  posix_spawn_file_actions_addclose(&actions, flides[1]);
   /* spawn p1ctl */
   pid_t pid;
   CHECK_ERROR(posix_spawnp(&pid, "/cores/binpack/usr/sbin/p1ctl", &actions, NULL, (char*[]){"p1ctl","palera1n_flags",NULL}, NULL), "could not spawn p1ctl");
+  close(flides[1]);
+  posix_spawn_file_actions_destroy(&actions);
   ssize_t didRead;
   int status;
   char p1flags_buf[16];
@@ -326,16 +345,17 @@ static void customConstructor(int argc, const char **argv){
   if (getpid() != 1) return;
   int fd_console = open("/dev/console",O_RDWR,0);
   dprintf(fd_console,"================ Hello from payload.dylib ================ \n");
-  signal(SIGBUS, DoNothingHandler);
+  signal(SIGBUS, SIG_IGN);
   /* make binpack available */
   pid_t pid;
   int ret;
   posix_spawn_file_actions_t actions;
   posix_spawn_file_actions_init(&actions);
-  posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO,"/dev/console", O_WRONLY, 0);
-  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/console", O_WRONLY, 0);
-  posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/console", O_RDONLY, 0);
+  posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO,"/dev/console", O_RDWR, 0);
+  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/console", O_RDWR, 0);
+  posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/console", O_RDWR, 0);
   CHECK_ERROR(posix_spawn(&pid, "/cores/jbloader", &actions, NULL, (char*[]){"/cores/jbloader","-f",NULL},environ), "could not spawn jbloader");
+  posix_spawn_file_actions_destroy(&actions);
   int status;
   waitpid(pid, &status, 0);
   if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
