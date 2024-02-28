@@ -21,9 +21,11 @@ struct paleinfo pinfo;
 char ios15_rootdev[] = "/dev/disk0s1s1";
 char ios16_rootdev[] = "/dev/disk1s1";
 
+#define O_CLOEXEC       0x01000000 
+
 int main()
 {
-  int fd_console = open("/dev/console", O_RDWR | O_SYNC, 0);
+  int fd_console = open("/dev/console", O_RDWR | O_SYNC | O_CLOEXEC, 0);
   sys_dup2(fd_console, 0);
   sys_dup2(fd_console, 1);
   sys_dup2(fd_console, 2);
@@ -108,13 +110,6 @@ int main()
 
   LOG("Closing console, goodbye!");
 
-  /*
-    Launchd doesn't like it when the console is open already!
-  */
-  for (size_t i = 0; i < 10; i++)
-  {
-    close(i);
-  }
   {
     char **argv = (char **)dylib_data;
     char **envp = argv+2;
