@@ -314,43 +314,14 @@ int hook_memorystatus_control(uint32_t command, int32_t pid, uint32_t flags, voi
 DYLD_INTERPOSE(hook_memorystatus_control, memorystatus_control);
 
 uint32_t get_flags_from_p1ctl(int fd_console) {
-  if (access("/cores/binpack/usr/sbin/p1ctl", F_OK) != 0) {
-    dprintf(fd_console, "could not access p1ctl: %d (%s)\n", errno, strerror(errno));
-    spin();
-  }
-  int flides[2];
-  int ret;
-  CHECK_ERROR(pipe(flides), "pipe failed");
-  posix_spawn_file_actions_t actions;
-  posix_spawn_file_actions_init(&actions);
-  posix_spawn_file_actions_adddup2(&actions, flides[1], STDOUT_FILENO);
-  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/console", O_RDWR, 0);
-  posix_spawn_file_actions_addclose(&actions, flides[0]);
-  posix_spawn_file_actions_addclose(&actions, flides[1]);
-  /* spawn p1ctl */
-  pid_t pid;
-  CHECK_ERROR(posix_spawnp(&pid, "/cores/binpack/usr/sbin/p1ctl", &actions, NULL, (char*[]){"p1ctl","palera1n_flags",NULL}, NULL), "could not spawn p1ctl");
-  close(flides[1]);
-  posix_spawn_file_actions_destroy(&actions);
-  ssize_t didRead;
-  int status;
-  char p1flags_buf[16];
-  /* in principle the child may block indefinitely without read(), so we read() then waitpid() */
-  didRead = read(flides[0], p1flags_buf, 15);
-  if (didRead < 0) {
-    dprintf(fd_console, "read failed: %d (%s)\n", errno, strerror(errno));
-    spin();
-  }
-  waitpid(pid, &status, 0);
-  close(flides[0]);
-  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-    dprintf(fd_console, "p1ctl waitpid status: %d\n", status);
-    spin();
-  }
-  p1flags_buf[15] = '\0';
-  pflags = (uint32_t)strtoul(p1flags_buf, NULL, 16);
+  uint32_t ramdisk_size_actual;
+  int fd = open("/dev/rmd0", O_RDONLY, 0);
+  read(fd, &ramdisk_size_actual, 4);
+  lseek(fd, (long)(ramdisk_size_actual) + 0x1008L, SEEK_SET);
+  read(fd, &pflags, 4);
+  close(fd);
   dprintf(fd_console, "pflags: %u\n", pflags);
-  return pflags;
+  return 0;
 }
 
 __attribute__((constructor))
