@@ -353,9 +353,8 @@ static void customConstructor(int argc, const char **argv){
     CHECK_ERROR(unmount("/cores/binpack/Applications", MNT_FORCE), "unmount(/cores/binpack/Applications)");
     CHECK_ERROR(unmount("/cores/binpack", MNT_FORCE), "unmount(/cores/binpack)");
     dprintf(fd_console, "Rebooting\n");
-    reboot_np(RB_AUTOBOOT, NULL);
-    sleep(5);
-    dprintf(fd_console, "reboot timed out\n");
+    host_reboot(mach_host_self(), 0x1000);
+    dprintf(fd_console, "reboot failed\n");
     spin();
   }
   if ((pflags & palerain_option_rootful) == 0) do_pspawn_hook = true;
