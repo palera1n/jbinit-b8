@@ -39,11 +39,31 @@ int apt(char* args[]) {
     return 0;
 }
 
-int additional_packages(const char *package_data) {
+int upgrade_packages() {
     int installed = pm_installed();
     if (installed == 0) {
         fprintf(stderr, "%s\n", "No package manager found, unable to continue.");
         return -1;
+    }
+
+    apt((char*[]){"apt-get", "update", "--allow-insecure-repositories", NULL});
+    apt((char*[]){"apt-get", "-o", "Dpkg::Options::=--force-confnew", "-y", "--fix-broken",  "install", "--allow-unauthenticated", NULL});
+
+    return 0;
+}
+
+int additional_packages(const char *package_data) {
+    int ret;
+    int installed = pm_installed();
+    if (installed == 0) {
+        fprintf(stderr, "%s\n", "No package manager found, unable to continue.");
+        return -1;
+    }
+
+    ret = upgrade_packages();
+    if (ret != 0) {
+        fprintf(stderr, "%s %d\n", "Failed to update packages via apt:", ret);
+        return ret;
     }
 
     apt((char*[]){"apt-get", "-o", "Dpkg::Options::=--force-confnew", "install", package_data, "-y", "--allow-unauthenticated", NULL});

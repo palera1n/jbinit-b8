@@ -205,6 +205,7 @@ int decompress(char *tar_path);
 int install_deb(char *deb_path);
 int add_sources(const char *repos_data);
 int add_packages(const char *package_data);
+int upgrade_packages();
 int apt(char* args[]);
 int revert_install();
 void print_pflags_str();
