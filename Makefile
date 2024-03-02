@@ -52,7 +52,7 @@ ramdisk.dmg: apple-include jbinit jbloader payload.dylib $(DEV_TARGETS)
 	rm -f ramdisk.dmg
 	sudo rm -rf ramdisk
 	mkdir -p ramdisk
-	mkdir -p ramdisk/{usr/lib,sbin,jbin,dev,mnt}
+	mkdir -p ramdisk/{usr/lib,sbin,jbin,dev,mnt,cores/fs/{real,fake}}
 	ln -s /jbin/jbloader ramdisk/sbin/launchd
 	ln -s /sbin/launchd ramdisk/jbin/launchd
 	mkdir -p ramdisk/usr/lib

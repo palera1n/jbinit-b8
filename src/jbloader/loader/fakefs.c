@@ -26,6 +26,8 @@
 #include <fcntl.h>
 #include <common.h>
 
+#define kIONVRAMForceSyncNowPropertyKey "IONVRAM-FORCESYNCNOW-PROPERTY"
+
 extern char** environ;
 #define CHECK_ERROR(action, loop, msg) do { \
  {int ___CHECK_ERROR_ret = action; \
@@ -144,64 +146,8 @@ static int setup_fakefs(struct paleinfo* pinfo_p) {
             spin();
         }
     }
-    
-    {
-        struct attrlist alist = { 0 };
-        char abuf[2048];
-        int rootfs_fd = open("/", O_RDONLY | O_DIRECTORY);
-        if (rootfs_fd == -1) {
-            fprintf(stderr, "open(/) failed: %d (%s)\n", errno, strerror(errno));
-        }
-        alist.commonattr = ATTR_BULK_REQUIRED;
-	    int count = fs_snapshot_list(rootfs_fd, &alist, &abuf[0], sizeof (abuf), 0);
-        if (count < 0) {
-            fprintf(stderr, "fs_snapshot_list(/) failed\n");
-            spin();
-        }
-        bool found_snapshot = false;
-        char *p = &abuf[0];
-        io_registry_entry_t chosen = IORegistryEntryFromPath(0, "IODeviceTree:/chosen");
-        if (!MACH_PORT_VALID(chosen)) {
-          fprintf(stderr, "get /chosen failed");
-          spin();
-        }
-        char expectedSnapshotName[150];
-        CFDataRef root_snapshot_name_data = IORegistryEntryCreateCFProperty(chosen, CFSTR("root-snapshot-name"), kCFAllocatorDefault, 0);
-        if (root_snapshot_name_data == NULL) {
-          fprintf(stderr, "cannot get root-snapshot-name\n");
-          spin();
-        }
-        CFStringRef RootSnapshotName = CFStringCreateFromExternalRepresentation(kCFAllocatorDefault, root_snapshot_name_data, kCFStringEncodingUTF8);
-        IOObjectRelease(chosen);
-        CFStringGetCString(RootSnapshotName, expectedSnapshotName, 150, kCFStringEncodingUTF8);
-        CFRelease (RootSnapshotName);
-        CFRelease (root_snapshot_name_data);
-        while (count > 0) {
-			    char *field = p;
-	      	uint32_t len = *(uint32_t *)field;
-		  	  field += sizeof (uint32_t);
-			    attribute_set_t attrs = *(attribute_set_t *)field;
-    			field += sizeof (attribute_set_t);
 
-		    	if (attrs.commonattr & ATTR_CMN_NAME) {
-				    attrreference_t ar = *(attrreference_t *)field;
-    				char *name = field + ar.attr_dataoffset;
-		    		field += sizeof(attrreference_t);
-				    if (strcmp(name, expectedSnapshotName) == 0) {
-              found_snapshot = true;
-              break;
-            }
-          }
-          count--;
-        }
-        printf("snapshot name: %s\n", expectedSnapshotName);
-        if (!found_snapshot) {
-            fprintf(stderr, "expected rootfs snapshot %s not found\n", expectedSnapshotName);
-            spin();
-        }
-        CHECK_ERROR(fs_snapshot_mount(rootfs_fd, "/cores/fs/real", expectedSnapshotName, MNT_RDONLY), 1, "fs_snapshot_mount() failed");
-        close(rootfs_fd);
-    }
+    CHECK_ERROR(mount("bindfs", "/cores/fs/real", MNT_RDONLY, "/"), 1, "bindfs / -> /cores/fs/real failed");
 
     CFMutableDictionaryRef dict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     int recoveryNumber = APFS_VOL_ROLE_RECOVERY;
@@ -217,12 +163,15 @@ static int setup_fakefs(struct paleinfo* pinfo_p) {
     CFRelease(volumeRole);
     CFRelease(dict);
 
-    if (strncmp(rootfs_st.f_mntfromname, "/dev/disk0s1s", sizeof("/dev/disk0s1s")-1) == 0) {
+    char* snapshot_marker = strstr(rootfs_st.f_mntfromname, "@/");
+    char* realfs_devname = snapshot_marker ? snapshot_marker+1 : rootfs_st.f_mntfromname;
+
+    if (strncmp(realfs_devname, "/dev/disk0s1s", sizeof("/dev/disk0s1s")-1) == 0) {
         snprintf(actual_fakefs_mntfromname, 50, "/dev/disk0s1s%d", fsindex+1);
-    } else if (strncmp(rootfs_st.f_mntfromname, "/dev/disk1s", sizeof("/dev/disk1s")-1) == 0) {
+    } else if (strncmp(realfs_devname, "/dev/disk1s", sizeof("/dev/disk1s")-1) == 0) {
         snprintf(actual_fakefs_mntfromname, 50, "/dev/disk1s%d", fsindex+1);
     } else {
-        fprintf(stderr, "unexpected rootfs f_mntfromname\n");
+        fprintf(stderr, "unexpected rootfs f_mntfromname: %s\n", rootfs_st.f_mntfromname);
         spin();
     }
     if (strcmp(actual_fakefs_mntfromname, fakefs_mntfromname)) {
@@ -287,6 +236,13 @@ static int setup_fakefs(struct paleinfo* pinfo_p) {
 
     if (access("/sbin/umount", F_OK) == 0)
         runCommand((char*[]){ "/sbin/umount", "-a", NULL });
+
+    io_registry_entry_t nvram = IORegistryEntryFromPath(kIOMasterPortDefault, kIODeviceTreePlane ":/options");
+    kern_return_t ret = IORegistryEntrySetCFProperty(nvram, CFSTR("auto-boot"), CFSTR("false"));
+    printf("set nvram auto-boot=false ret: %d\n",ret);
+    ret = IORegistryEntrySetCFProperty(nvram, CFSTR(kIONVRAMForceSyncNowPropertyKey), CFSTR("auto-boot"));
+    printf("sync nvram ret: %d\n",ret);
+    IOObjectRelease(nvram);
 
     sync();
     return 0;
