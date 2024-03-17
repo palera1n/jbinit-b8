@@ -25,6 +25,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <common.h>
+#include <mach/mach.h>
+#include <mach/error.h>
 
 #define kIONVRAMForceSyncNowPropertyKey "IONVRAM-FORCESYNCNOW-PROPERTY"
 
@@ -156,7 +158,12 @@ static int setup_fakefs(struct paleinfo* pinfo_p) {
     CFDictionaryAddValue(dict, kAPFSVolumeNameKey, CFSTR("Xystem"));
     CFDictionaryAddValue(dict, kAPFSVolumeCaseSensitiveKey, kCFBooleanTrue);
 
-    CHECK_ERROR(APFSVolumeCreate("disk0s1", dict), 1, "APFSVolumeCreate failed");
+    int retval = APFSVolumeCreate("disk0s1", dict);
+    if (retval) {
+        fprintf(stderr, "APFSVolumeCreate failed: %d: %s\n", retval, mach_error_string(retval));
+        spin();
+    }
+
     char actual_fakefs_mntfromname[50];
     int32_t fsindex;
     CFNumberGetValue(CFDictionaryGetValue(dict, kAPFSVolumeFSIndexKey), kCFNumberSInt32Type, &fsindex);

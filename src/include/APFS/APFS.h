@@ -9,70 +9,70 @@
 
 __BEGIN_DECLS
 
-int
+kern_return_t
 APFSCancelContainerResize(os_unfair_lock_t lock);
 
-int
+kern_return_t
 APFSContainerDefrag(const char *bsdName);
 
-int
+kern_return_t
 APFSContainerEFIEmbed(const char *bsdName, const char **Ptr, size_t PtrSize);
 
-int
+kern_return_t
 APFSContainerEFIGetVersion(const char *bsdName, const char **Ptr, size_t PtrSize, void *outputStruct);
 
-int
+kern_return_t
 APFSContainerGetBootDevice(CFStringRef *container);
 
-int
+kern_return_t
 APFSContainerGetDefrag(const char *bsdName, int *buf);
 
-int
+kern_return_t
 APFSContainerGetFreeExtentHistogram(io_service_t device, CFDictionaryRef dict);
 
-int
+kern_return_t
 APFSContainerGetMaxVolumeCount(const char *device, CFIndex *buf);
 
-int
+kern_return_t
 APFSContainerGetMinimalSize(const char *device, CFIndex *buf);
 
-int
+kern_return_t
 APFSContainerMigrateMediaKeys(const char *container);
 
-int
+kern_return_t
 APFSContainerSetDefrag(const char *bsdName, int defrag);
 
-int
+kern_return_t
 APFSContainerStitchVolumeGroup(const char *bsdName);
 
-int
+kern_return_t
 APFSContainerVolumeGroupRemove(const char *bsdName, uuid_t uuid);
 
-int
+kern_return_t
 APFSContainerVolumeGroupSyncUnlockRecords(const char *bsdName, uuid_t uuid);
 
-int
+kern_return_t
 APFSContainerWipeVolumeKeys(const char *bsdName);
 
-int
+kern_return_t
 APFSExtendedSpaceInfo(const char *device, CFDictionaryRef dict);
 
-int
+kern_return_t
 APFSGetVolumeGroupID(const char *device, uuid_t uuid);
 
-int
+kern_return_t
 APFSVolumeCreate(const char *device, CFDictionaryRef dict);
 
-int
+kern_return_t
 APFSVolumeCreateForMSU(const char *device, CFDictionaryRef dict);
 
-int
+kern_return_t
 APFSVolumeDelete(const char *device);
 
-int
+kern_return_t
 APFSVolumeRole(const char *device, short *role, CFMutableArrayRef *buf);
 
-int
+kern_return_t
 APFSVolumeRoleFind(const char *device, short role, CFMutableArrayRef *buf);
 
 __END_DECLS

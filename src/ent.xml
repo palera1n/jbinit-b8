@@ -30,8 +30,7 @@
     <true/>
     <key>com.apple.security.iokit-user-client-class</key>
     <array>
-        <string>IOHDIXControllerUserClient</string>
-        <string>AppleAPFSUserClient</string>
+        <string>IOUserClient</string>
     </array>
     <key>com.apple.springboard.CFUserNotification</key>
     <true/>
