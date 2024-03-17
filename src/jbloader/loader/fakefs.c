@@ -158,7 +158,14 @@ static int setup_fakefs(struct paleinfo* pinfo_p) {
     CFDictionaryAddValue(dict, kAPFSVolumeNameKey, CFSTR("Xystem"));
     CFDictionaryAddValue(dict, kAPFSVolumeCaseSensitiveKey, kCFBooleanTrue);
 
-    int retval = APFSVolumeCreate("disk0s1", dict);
+    const char* container = "disk0s1";
+    if (strncmp(pinfo_p->rootdev, "disk1s", 6) == 0) {
+        container = "disk1";
+    }
+
+    printf("container=%s\n", container);
+
+    int retval = APFSVolumeCreate(container, dict);
     if (retval) {
         fprintf(stderr, "APFSVolumeCreate failed: %d: %s\n", retval, mach_error_string(retval));
         spin();
